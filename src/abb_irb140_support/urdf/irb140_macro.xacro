@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://ros.org/wiki/xacro">
+<xacro:include filename="$(find abb_irb140_support)/urdf/grippers/panda_gripper_macro.xacro"/>
 <xacro:macro name="abb_irb140" params="prefix">
     <!-- link list -->
     <link name="${prefix}base_link">
@@ -168,6 +169,10 @@
     <child link="${prefix}tool0"/>
     <origin rpy="0 0 0" xyz="0 0 0"/>
   </joint>
+
+  <xacro:panda_gripper
+    parent="${prefix}tool0"
+    prefix="gripper_"/>
     <!-- end of joint list -->
 
     <!-- ROS base_link to ABB World Coordinates transform -->
