@@ -1,6 +1,7 @@
 # Default initial positions for abb_irb140's ros2_control fake system
 
 initial_positions:
+  gripper_finger_joint1: 0
   joint_1: 0
   joint_2: 0
   joint_3: 0

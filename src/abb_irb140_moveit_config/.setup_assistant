@@ -7,7 +7,7 @@ moveit_setup_assistant_config:
   package_settings:
     author_name: oty
     author_email: v248206@dac.unicamp.br
-    generated_timestamp: 1781369191
+    generated_timestamp: 1781465492
   control_xacro:
     command:
       - position
