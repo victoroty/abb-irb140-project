@@ -25,7 +25,25 @@ public:
 
     bool goReady();
 
+    bool openGripper();
+
+    bool closeGripper();
+
     bool addTable();
+
+    bool addBox(
+        double x,
+        double y,
+        double z
+    );
+
+    bool attachBox();
+
+    bool detachBox(
+        double x,
+        double y,
+        double z
+    );
 
     bool pick(
         double x,
@@ -71,6 +89,10 @@ private:
     std::shared_ptr<
         moveit::planning_interface::MoveGroupInterface
     > move_group_;
+
+    std::shared_ptr<
+        moveit::planning_interface::MoveGroupInterface
+    > gripper_group_;
 };
 
 #endif

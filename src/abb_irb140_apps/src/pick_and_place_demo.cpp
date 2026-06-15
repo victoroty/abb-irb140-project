@@ -8,50 +8,76 @@ int main(int argc, char * argv[])
 
     RobotController robot;
 
+    auto fail =
+        [](const char * step)
+        {
+            RCLCPP_ERROR(
+                rclcpp::get_logger("demo"),
+                "%s failed",
+                step
+            );
+
+            rclcpp::shutdown();
+
+            return 1;
+        };
+
     RCLCPP_INFO(
         rclcpp::get_logger("demo"),
-        "Starting pick and place demo"
+        "Starting side-grasp pick and place demo"
     );
 
-    robot.goHome();
+    const double box_x = 0.465;
+    const double pick_y = 0.20;
+    const double place_y = -0.20;
+    const double box_z = 0.120;
 
-    robot.moveToPose(
-        0.45,
-        0.20,
-        0.50
-    );
+    if (!robot.goHome())
+    {
+        return fail("goHome");
+    }
 
-    robot.moveLinear(
-        0.45,
-        0.20,
-        0.20
-    );
+    if (!robot.addTable())
+    {
+        return fail("addTable");
+    }
 
-    robot.moveLinear(
-        0.45,
-        0.20,
-        0.50
-    );
+    if (!robot.addBox(
+        box_x,
+        pick_y,
+        box_z
+    ))
+    {
+        return fail("addBox");
+    }
 
-    robot.moveToPose(
-        0.45,
-        -0.20,
-        0.50
-    );
+    if (!robot.openGripper())
+    {
+        return fail("openGripper");
+    }
 
-    robot.moveLinear(
-        0.45,
-        -0.20,
-        0.20
-    );
+    if (!robot.pick(
+        box_x,
+        pick_y,
+        box_z
+    ))
+    {
+        return fail("pick");
+    }
 
-    robot.moveLinear(
-        0.45,
-        -0.20,
-        0.50
-    );
+    if (!robot.place(
+        box_x,
+        place_y,
+        box_z
+    ))
+    {
+        return fail("place");
+    }
 
-    robot.goHome();
+    if (!robot.goHome())
+    {
+        return fail("goHome final");
+    }
 
     rclcpp::shutdown();
 

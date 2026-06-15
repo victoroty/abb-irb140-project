@@ -5,10 +5,20 @@
     <!-- Import abb_irb140 urdf file -->
     <xacro:include filename="$(find abb_irb140_support)/urdf/irb140.xacro" />
 
+<!--
+  Disabled for this project.
+
+  abb_irb140_support/urdf/irb140.xacro already provides the real/control-ready
+  ros2_control block named IRB140System.
+
+  Leaving the MoveIt-generated FakeSystem enabled creates duplicate command
+  interfaces such as gripper_finger_joint1/position.
+-->
+
     <!-- Import control_xacro -->
-    <xacro:include filename="abb_irb140.ros2_control.xacro" />
+    <!--<xacro:include filename="abb_irb140.ros2_control.xacro" />-->
 
 
-    <xacro:abb_irb140_ros2_control name="FakeSystem" initial_positions_file="$(arg initial_positions_file)"/>
+    <!--<xacro:abb_irb140_ros2_control name="FakeSystem" initial_positions_file="$(arg initial_positions_file)"/>-->
 
 </robot>

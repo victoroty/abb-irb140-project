@@ -64,6 +64,15 @@
       <limit lower="0.0" upper="0.04" effort="100" velocity="0.2"/>
     </joint>
 
+    <!-- Grasp frame: center point between the fingers where objects are attached -->
+    <link name="${prefix}grasp_frame"/>
+
+    <joint name="${prefix}grasp_frame_joint" type="fixed">
+      <parent link="${prefix}panda_hand"/>
+      <child link="${prefix}grasp_frame"/>
+      <origin xyz="0 0 0.085" rpy="0 0 0"/>
+    </joint>
+
     <!-- Right finger joint -->
     <joint name="${prefix}finger_joint2" type="prismatic">
       <parent link="${prefix}panda_hand"/>

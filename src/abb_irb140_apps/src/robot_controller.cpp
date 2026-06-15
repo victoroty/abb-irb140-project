@@ -1,8 +1,12 @@
 #include "abb_irb140_apps/robot_controller.hpp"
+
 #include <moveit_msgs/msg/robot_trajectory.hpp>
 #include <moveit/planning_scene_interface/planning_scene_interface.hpp>
 #include <moveit_msgs/msg/collision_object.hpp>
 #include <shape_msgs/msg/solid_primitive.hpp>
+#include <moveit_msgs/msg/attached_collision_object.hpp>
+
+#include <stdexcept>
 
 RobotController::RobotController()
 {
@@ -28,6 +32,41 @@ RobotController::RobotController()
             node_,
             "manipulator"
         );
+
+    if (!move_group_->setEndEffectorLink(
+            "gripper_grasp_frame"
+        ))
+    {
+        RCLCPP_ERROR(
+            node_->get_logger(),
+            "Failed to set end effector link to gripper_grasp_frame"
+        );
+
+        throw std::runtime_error(
+            "Failed to set end effector link to gripper_grasp_frame"
+        );
+    }
+
+    gripper_group_ =
+        std::make_shared<
+            moveit::planning_interface::MoveGroupInterface
+        >(
+            node_,
+            "gripper"
+        );
+
+    RCLCPP_INFO(
+        node_->get_logger(),
+        "Planning frame: %s",
+        move_group_->getPlanningFrame().c_str()
+    );
+
+    RCLCPP_INFO(
+        node_->get_logger(),
+        "End effector link: %s",
+        move_group_->getEndEffectorLink().c_str()
+    );
+
 }
 
 RobotController::~RobotController()
@@ -84,22 +123,98 @@ bool RobotController::goReady()
     return executeCurrentTarget();
 }
 
+bool RobotController::openGripper()
+{
+    gripper_group_->setJointValueTarget(
+        "gripper_finger_joint1",
+        0.04
+    );
+
+    moveit::planning_interface::MoveGroupInterface::Plan plan;
+
+    bool success =
+        static_cast<bool>(
+            gripper_group_->plan(plan)
+        );
+
+    if (!success)
+    {
+        RCLCPP_ERROR(
+            node_->get_logger(),
+            "Failed to plan gripper opening"
+        );
+
+        return false;
+    }
+
+    auto result =
+        gripper_group_->execute(plan);
+
+    return result ==
+        moveit::core::MoveItErrorCode::SUCCESS;
+}
+
+bool RobotController::closeGripper()
+{
+    gripper_group_->setJointValueTarget(
+        "gripper_finger_joint1",
+        0.0
+    );
+
+    moveit::planning_interface::MoveGroupInterface::Plan plan;
+
+    bool success =
+        static_cast<bool>(
+            gripper_group_->plan(plan)
+        );
+
+    if (!success)
+    {
+        RCLCPP_ERROR(
+            node_->get_logger(),
+            "Failed to plan gripper closing"
+        );
+
+        return false;
+    }
+
+    auto result =
+        gripper_group_->execute(plan);
+
+    return result ==
+        moveit::core::MoveItErrorCode::SUCCESS;
+}
+
 bool RobotController::pick(
     double x,
     double y,
     double z
 )
 {
-    const double approach_height = 0.10;
+    const double approach_distance = 0.12;
+    const double lift_height = 0.10;
+
+    const double pre_grasp_x =
+        x - approach_distance;
 
     if (!moveToPose(
-        x,
+        pre_grasp_x,
         y,
-        z + approach_height
+        z
     ))
     {
         return false;
     }
+
+    auto p = getCurrentPose();
+
+    RCLCPP_INFO(
+        node_->get_logger(),
+        "Current grasp frame pose: x=%.3f y=%.3f z=%.3f",
+        p.position.x,
+        p.position.y,
+        p.position.z
+    );
 
     if (!moveLinear(
         x,
@@ -110,15 +225,59 @@ bool RobotController::pick(
         return false;
     }
 
-    RCLCPP_INFO(
+RCLCPP_INFO(
+    node_->get_logger(),
+    "Before attachBox"
+);
+
+if (!attachBox())
+{
+    RCLCPP_ERROR(
         node_->get_logger(),
-        "Closing gripper (simulated)"
+        "attachBox failed"
     );
 
+    return false;
+}
+
+RCLCPP_INFO(
+    node_->get_logger(),
+    "After attachBox"
+);
+
+RCLCPP_INFO(
+    node_->get_logger(),
+    "Before closeGripper"
+);
+
+if (!closeGripper())
+{
+    RCLCPP_ERROR(
+        node_->get_logger(),
+        "closeGripper failed"
+    );
+
+    return false;
+}
+
+RCLCPP_INFO(
+    node_->get_logger(),
+    "After closeGripper"
+);
+
     if (!moveLinear(
-        x,
+        pre_grasp_x,
         y,
-        z + approach_height
+        z
+    ))
+    {
+        return false;
+    }
+
+    if (!moveToPose(
+        pre_grasp_x,
+        y,
+        z + lift_height
     ))
     {
         return false;
@@ -133,12 +292,25 @@ bool RobotController::place(
     double z
 )
 {
-    const double approach_height = 0.10;
+    const double approach_distance = 0.12;
+    const double lift_height = 0.10;
+
+    const double pre_place_x =
+        x - approach_distance;
 
     if (!moveToPose(
-        x,
+        pre_place_x,
         y,
-        z + approach_height
+        z + lift_height
+    ))
+    {
+        return false;
+    }
+
+    if (!moveToPose(
+        pre_place_x,
+        y,
+        z
     ))
     {
         return false;
@@ -153,15 +325,33 @@ bool RobotController::place(
         return false;
     }
 
-    RCLCPP_INFO(
-        node_->get_logger(),
-        "Opening gripper (simulated)"
-    );
+    if (!openGripper())
+    {
+        return false;
+    }
 
-    if (!moveLinear(
+    if (!detachBox(
         x,
         y,
-        z + approach_height
+        z
+    ))
+    {
+        return false;
+    }
+
+    if (!moveLinear(
+        pre_place_x,
+        y,
+        z
+    ))
+    {
+        return false;
+    }
+
+    if (!moveToPose(
+        pre_place_x,
+        y,
+        z + lift_height
     ))
     {
         return false;
@@ -182,10 +372,20 @@ bool RobotController::moveToPose(
     target_pose.position.y = y;
     target_pose.position.z = z;
 
+    // Side-grasp orientation.
+    // This is the first test orientation for a horizontal side grasp.
     target_pose.orientation.x = 0.0;
-    target_pose.orientation.y = 0.0;
+    target_pose.orientation.y = 0.7071068;
     target_pose.orientation.z = 0.0;
-    target_pose.orientation.w = 1.0;
+    target_pose.orientation.w = 0.7071068;
+
+    RCLCPP_INFO(
+        node_->get_logger(),
+        "moveToPose target x=%.3f y=%.3f z=%.3f",
+        x,
+        y,
+        z
+    );
 
     move_group_->setPoseTarget(
         target_pose
@@ -219,6 +419,17 @@ bool RobotController::moveLinear(
 {
     std::vector<geometry_msgs::msg::Pose> waypoints;
 
+    auto current = getCurrentPose();
+
+    RCLCPP_INFO(
+        node_->get_logger(),
+        "moveLinear from x=%.3f y=%.3f z=%.3f to x=%.3f y=%.3f z=%.3f",
+        current.position.x,
+        current.position.y,
+        current.position.z,
+        x, y, z
+    );
+
     auto target =
         getCurrentPose();
 
@@ -234,8 +445,16 @@ bool RobotController::moveLinear(
         move_group_->computeCartesianPath(
             waypoints,
             0.01,
-            trajectory
+            0.0,
+            trajectory,
+            true
         );
+
+    RCLCPP_INFO(
+        node_->get_logger(),
+        "Cartesian fraction = %.3f",
+        fraction
+    );
 
     if (fraction < 0.95)
     {
@@ -275,15 +494,15 @@ bool RobotController::addTable()
 
     primitive.dimensions.resize(3);
 
-    primitive.dimensions[0] = 1.0;
-    primitive.dimensions[1] = 1.0;
+    primitive.dimensions[0] = 0.40;
+    primitive.dimensions[1] = 0.70;
     primitive.dimensions[2] = 0.10;
 
     geometry_msgs::msg::Pose table_pose;
 
     table_pose.orientation.w = 1.0;
 
-    table_pose.position.x = 0.60;
+    table_pose.position.x = 0.65;
     table_pose.position.y = 0.00;
     table_pose.position.z = 0.05;
 
@@ -304,6 +523,221 @@ bool RobotController::addTable()
     RCLCPP_INFO(
         node_->get_logger(),
         "Table added to planning scene"
+    );
+
+    return true;
+}
+
+bool RobotController::addBox(
+    double x,
+    double y,
+    double z
+)
+{
+    moveit::planning_interface::PlanningSceneInterface
+        planning_scene_interface;
+
+    moveit_msgs::msg::CollisionObject box;
+
+    box.header.frame_id = "base_link";
+
+    box.id = "box";
+
+    shape_msgs::msg::SolidPrimitive primitive;
+
+    primitive.type =
+        primitive.BOX;
+
+    primitive.dimensions.resize(3);
+
+    primitive.dimensions[0] = 0.03;
+    primitive.dimensions[1] = 0.03;
+    primitive.dimensions[2] = 0.03;
+
+    geometry_msgs::msg::Pose pose;
+
+    pose.orientation.w = 1.0;
+
+    pose.position.x = x;
+    pose.position.y = y;
+    pose.position.z = z;
+
+    box.primitives.push_back(
+        primitive
+    );
+
+    box.primitive_poses.push_back(
+        pose
+    );
+
+    box.operation =
+        box.ADD;
+
+    planning_scene_interface
+        .applyCollisionObject(box);
+
+    rclcpp::sleep_for(std::chrono::seconds(2));
+
+    RCLCPP_INFO(
+        node_->get_logger(),
+        "Box added"
+    );
+
+    return true;
+}
+
+bool RobotController::attachBox()
+{
+    moveit::planning_interface::PlanningSceneInterface
+        planning_scene_interface;
+
+    moveit_msgs::msg::AttachedCollisionObject attached;
+
+    attached.link_name =
+        "gripper_grasp_frame";
+
+    attached.object.header.frame_id =
+        "gripper_grasp_frame";
+
+    attached.object.id =
+        "box";
+
+    shape_msgs::msg::SolidPrimitive primitive;
+
+    primitive.type =
+        primitive.BOX;
+
+    primitive.dimensions.resize(3);
+    primitive.dimensions[0] = 0.03;
+    primitive.dimensions[1] = 0.03;
+    primitive.dimensions[2] = 0.03;
+
+    geometry_msgs::msg::Pose pose;
+    pose.orientation.w = 1.0;
+
+    // Box relative to gripper grasp frame
+    pose.position.x = 0.0;
+    pose.position.y = 0.0;
+    pose.position.z = 0.0;
+
+    attached.object.primitives.push_back(
+        primitive
+    );
+
+    attached.object.primitive_poses.push_back(
+        pose
+    );
+
+    attached.object.operation =
+        attached.object.ADD;
+
+    attached.touch_links = {
+        "gripper_grasp_frame",
+        "gripper_panda_hand",
+        "gripper_leftfinger",
+        "gripper_rightfinger"
+    };
+
+    planning_scene_interface
+        .applyAttachedCollisionObject(
+            attached
+        );
+
+    rclcpp::sleep_for(std::chrono::seconds(2));
+
+    RCLCPP_INFO(
+        node_->get_logger(),
+        "Box attached"
+    );
+
+    return true;
+}
+
+bool RobotController::detachBox(
+    double x,
+    double y,
+    double z
+)
+{
+    moveit::planning_interface::PlanningSceneInterface
+        planning_scene_interface;
+
+    moveit_msgs::msg::AttachedCollisionObject attached;
+
+    attached.link_name =
+        "gripper_grasp_frame";
+
+    attached.object.id =
+        "box";
+
+    attached.object.operation =
+        attached.object.REMOVE;
+
+    planning_scene_interface
+        .applyAttachedCollisionObject(
+            attached
+        );
+
+    rclcpp::sleep_for(
+        std::chrono::milliseconds(500)
+    );
+
+    moveit_msgs::msg::CollisionObject box;
+
+    box.header.frame_id =
+        "base_link";
+
+    box.id =
+        "box";
+
+    shape_msgs::msg::SolidPrimitive primitive;
+
+    primitive.type =
+        primitive.BOX;
+
+    primitive.dimensions.resize(3);
+
+    primitive.dimensions[0] = 0.03;
+    primitive.dimensions[1] = 0.03;
+    primitive.dimensions[2] = 0.03;
+
+    geometry_msgs::msg::Pose pose;
+
+    pose.orientation.w =
+        1.0;
+
+    pose.position.x =
+        x;
+
+    pose.position.y =
+        y;
+
+    pose.position.z =
+        z;
+
+    box.primitives.push_back(
+        primitive
+    );
+
+    box.primitive_poses.push_back(
+        pose
+    );
+
+    box.operation =
+        box.ADD;
+
+    planning_scene_interface
+        .applyCollisionObject(
+            box
+        );
+
+    rclcpp::sleep_for(
+        std::chrono::milliseconds(500)
+    );
+
+    RCLCPP_INFO(
+        node_->get_logger(),
+        "Box detached and placed in world"
     );
 
     return true;
