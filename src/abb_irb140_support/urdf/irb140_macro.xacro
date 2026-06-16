@@ -1,6 +1,26 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://ros.org/wiki/xacro">
 <xacro:include filename="$(find abb_irb140_support)/urdf/grippers/panda_gripper_macro.xacro"/>
+<!--
+  Approximate inertial model for Gazebo simulation.
+
+  These values are not manufacturer-accurate ABB dynamics.
+  They are conservative box approximations so Gazebo can create
+  physically valid links.
+-->
+<xacro:macro name="box_inertial" params="mass x y z">
+  <inertial>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <mass value="${mass}"/>
+    <inertia
+      ixx="${mass * (y * y + z * z) / 12.0}"
+      ixy="0.0"
+      ixz="0.0"
+      iyy="${mass * (x * x + z * z) / 12.0}"
+      iyz="0.0"
+      izz="${mass * (x * x + y * y) / 12.0}"/>
+  </inertial>
+</xacro:macro>
 <xacro:macro name="abb_irb140" params="prefix">
     <!-- link list -->
     <link name="${prefix}base_link">
@@ -21,6 +41,7 @@
         <color rgba="0 1 1 1"/>
       </material>
     </collision>
+    <xacro:box_inertial mass="20.0" x="0.35" y="0.35" z="0.30"/>
   </link>
   <link name="${prefix}link_1">
     <visual>
@@ -37,6 +58,7 @@
       </geometry>
       <material name="yellow"/>
     </collision>
+    <xacro:box_inertial mass="12.0" x="0.30" y="0.30" z="0.35"/>
   </link>
   <link name="${prefix}link_2">
     <visual>
@@ -53,6 +75,7 @@
       </geometry>
       <material name="yellow"/>
     </collision>
+    <xacro:box_inertial mass="18.0" x="0.18" y="0.20" z="0.50"/>
   </link>
   <link name="${prefix}link_3">
     <visual>
@@ -69,6 +92,7 @@
       </geometry>
       <material name="yellow"/>
     </collision>
+    <xacro:box_inertial mass="10.0" x="0.22" y="0.18" z="0.35"/>
   </link>
   <link name="${prefix}link_4">
     <visual>
@@ -85,6 +109,7 @@
       </geometry>
       <material name="yellow"/>
     </collision>
+    <xacro:box_inertial mass="6.0" x="0.25" y="0.14" z="0.14"/>
   </link>
   <link name="${prefix}link_5">
     <visual>
@@ -101,6 +126,7 @@
       </geometry>
       <material name="yellow"/>
     </collision>
+    <xacro:box_inertial mass="4.0" x="0.16" y="0.12" z="0.12"/>
   </link>
   <link name="${prefix}link_6">
     <visual>
@@ -117,6 +143,7 @@
       </geometry>
       <material name="yellow"/>
     </collision>
+    <xacro:box_inertial mass="2.0" x="0.12" y="0.10" z="0.10"/>
   </link>
   <link name="${prefix}tool0"/>
     <!-- end of link list -->
@@ -127,42 +154,42 @@
     <parent link="${prefix}base_link"/>
     <child link="${prefix}link_1"/>
     <axis xyz="0 0 1"/>
-    <limit effort="0" lower="-3.1416" upper="3.1416" velocity="2.618"/>
+    <limit effort="200" lower="-3.1416" upper="3.1416" velocity="2.618"/>
   </joint>
   <joint name="joint_2" type="revolute">
     <origin rpy="0 0 0" xyz="0.070 0 0.352"/>
     <parent link="${prefix}link_1"/>
     <child link="${prefix}link_2"/>
     <axis xyz="0 1 0"/>
-    <limit effort="0" lower="-1.7453" upper="1.7453" velocity="2.618"/>
+    <limit effort="250" lower="-1.7453" upper="1.7453" velocity="2.618"/>
   </joint>
   <joint name="joint_3" type="revolute">
     <origin rpy="0 0 0" xyz="0 -0.065 0.360"/>
     <parent link="${prefix}link_2"/>
     <child link="${prefix}link_3"/>
     <axis xyz="0 1 0"/>
-    <limit effort="0" lower="-2.4434" upper="2.4434" velocity="2.618"/>
+    <limit effort="200" lower="-2.4434" upper="2.4434" velocity="2.618"/>
   </joint>
   <joint name="${prefix}joint_4" type="revolute">
     <origin rpy="0 0 0" xyz="0.239 0.065 0"/>
     <parent link="${prefix}link_3"/>
     <child link="${prefix}link_4"/>
     <axis xyz="1 0 0"/>
-    <limit effort="0" lower="-3.49" upper="3.49" velocity="6.2832"/>
+    <limit effort="80" lower="-3.49" upper="3.49" velocity="6.2832"/>
   </joint>
   <joint name="${prefix}joint_5" type="revolute">
     <origin rpy="0 0 0" xyz="0.141 0 0"/>
     <parent link="${prefix}link_4"/>
     <child link="${prefix}link_5"/>
     <axis xyz="0 1 0"/>
-    <limit effort="0" lower="-2.0071" upper="2.0071" velocity="6.2832"/>
+    <limit effort="60" lower="-2.0071" upper="2.0071" velocity="6.2832"/>
   </joint>
   <joint name="${prefix}joint_6" type="revolute">
     <origin rpy="0 0 0" xyz="0.065 0 0"/>
     <parent link="${prefix}link_5"/>
     <child link="${prefix}link_6"/>
     <axis xyz="1 0 0"/>
-    <limit effort="0" lower="-6.9813" upper="6.9813" velocity="7.854"/>
+    <limit effort="40" lower="-6.9813" upper="6.9813" velocity="7.854"/>
   </joint>
   <joint name="${prefix}joint_6-tool0" type="fixed">
     <parent link="${prefix}link_6"/>

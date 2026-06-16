@@ -1,11 +1,19 @@
 <?xml version="1.0" ?>
 
 <robot name="abb_irb140" xmlns:xacro="http://ros.org/wiki/xacro">
+        <xacro:arg name="use_gazebo" default="false"/>
 	<xacro:include filename="$(find abb_irb140_support)/urdf/irb140_macro.xacro"/>
 	<xacro:abb_irb140 prefix=""/>
 <ros2_control name="IRB140System" type="system">
   <hardware>
-    <plugin>mock_components/GenericSystem</plugin>
+    <xacro:if value="$(arg use_gazebo)">
+      <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+      <param name="position_proportional_gain">0.8</param>
+    </xacro:if>
+
+    <xacro:unless value="$(arg use_gazebo)">
+      <plugin>mock_components/GenericSystem</plugin>
+    </xacro:unless>
   </hardware>
 
   <joint name="joint_1">
@@ -51,4 +59,26 @@
   </joint>
 
 </ros2_control>
+<xacro:if value="$(arg use_gazebo)">
+  <!--
+    Gazebo-only temporary mounting fix.
+
+    This represents the industrial robot being bolted to the world/floor.
+    Long-term, this should move into a proper Gazebo workcell/world model.
+  -->
+  <gazebo>
+    <joint name="world_to_base_link" type="fixed">
+      <parent>world</parent>
+      <child>base_link</child>
+    </joint>
+  </gazebo>
+
+  <gazebo>
+    <plugin
+      filename="libgz_ros2_control-system.so"
+      name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+      <parameters>$(find abb_irb140_moveit_config)/config/ros2_controllers.yaml</parameters>
+    </plugin>
+  </gazebo>
+</xacro:if>
 </robot>

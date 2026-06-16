@@ -2,6 +2,7 @@ from launch import LaunchDescription
 from launch_ros.actions import Node
 from moveit_configs_utils import MoveItConfigsBuilder
 from moveit_configs_utils.launches import generate_demo_launch
+from launch.actions import TimerAction
 
 
 def generate_launch_description():
@@ -27,6 +28,13 @@ def generate_launch_description():
     for entity in demo.entities:
         ld.add_action(entity)
 
-    ld.add_action(app)
+    ld.add_action(
+        TimerAction(
+            period=5.0,
+            actions=[
+                app
+            ]
+        )
+    )
 
     return ld

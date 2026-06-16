@@ -23,6 +23,7 @@
           <mesh filename="file:///opt/ros/jazzy/share/moveit_resources_panda_description/meshes/collision/hand.stl"/>
         </geometry>
       </collision>
+    <xacro:box_inertial mass="1.0" x="0.10" y="0.08" z="0.08"/>
     </link>
 
     <!-- Left finger -->
@@ -38,6 +39,7 @@
           <mesh filename="file:///opt/ros/jazzy/share/moveit_resources_panda_description/meshes/collision/finger.stl"/>
         </geometry>
       </collision>
+    <xacro:box_inertial mass="0.10" x="0.02" y="0.02" z="0.08"/>
     </link>
 
     <!-- Right finger -->
@@ -53,6 +55,7 @@
           <mesh filename="file:///opt/ros/jazzy/share/moveit_resources_panda_description/meshes/collision/finger.stl"/>
         </geometry>
       </collision>
+    <xacro:box_inertial mass="0.10" x="0.02" y="0.02" z="0.08"/>
     </link>
 
     <!-- Left finger joint -->

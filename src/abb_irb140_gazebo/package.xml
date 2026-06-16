@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>abb_irb140_gazebo</name>
+  <version>0.0.0</version>
+  <description>Gazebo simulation launch files for the ABB IRB140 project.</description>
+
+  <maintainer email="student@example.com">student</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <exec_depend>ros_gz_sim</exec_depend>
+  <exec_depend>ros_gz_bridge</exec_depend>
+  <exec_depend>gz_ros2_control</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
