@@ -156,9 +156,14 @@ bool RobotController::openGripper()
 
 bool RobotController::closeGripper()
 {
+/*
+  The box is 0.03 m wide. A full close target of 0.0 can collide
+  through a physical/simulated box and make the gripper controller abort.
+  0.017 keeps a small clearance around a 0.03 m object.
+*/
     gripper_group_->setJointValueTarget(
         "gripper_finger_joint1",
-        0.0
+        0.017
     );
 
     moveit::planning_interface::MoveGroupInterface::Plan plan;
@@ -445,7 +450,6 @@ bool RobotController::moveLinear(
         move_group_->computeCartesianPath(
             waypoints,
             0.01,
-            0.0,
             trajectory,
             true
         );

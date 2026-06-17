@@ -58,20 +58,34 @@
     <state_interface name="velocity"/>
   </joint>
 
+  <!--
+    State-only mimic finger for Gazebo.
+
+    gripper_finger_joint1 is the commanded joint.
+    gripper_finger_joint2 already has a URDF <mimic> tag in the gripper macro.
+    For gz_ros2_control, the mimic joint must not have a command interface.
+  -->
+  <joint name="gripper_finger_joint2">
+    <state_interface name="position"/>
+    <state_interface name="velocity"/>
+  </joint>
+
 </ros2_control>
+
 <xacro:if value="$(arg use_gazebo)">
   <!--
-    Gazebo-only temporary mounting fix.
+    Massless world root used in Gazebo mode.
 
-    This represents the industrial robot being bolted to the world/floor.
-    Long-term, this should move into a proper Gazebo workcell/world model.
+    This prevents KDL from treating base_link, which has inertia, as the
+    root link of the robot tree.
   -->
-  <gazebo>
-    <joint name="world_to_base_link" type="fixed">
-      <parent>world</parent>
-      <child>base_link</child>
-    </joint>
-  </gazebo>
+  <link name="world"/>
+
+  <joint name="world_to_base_link" type="fixed">
+    <parent link="world"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
 
   <gazebo>
     <plugin
@@ -81,4 +95,5 @@
     </plugin>
   </gazebo>
 </xacro:if>
+
 </robot>
