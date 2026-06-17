@@ -1,12 +1,34 @@
+# ROS/colcon generated output
 build/
 install/
 log/
 
-*.pyc
+# ROS runtime logs
+.ros/
+*.log
+
+# Python cache
 __pycache__/
+*.pyc
 
+# Temporary/editor files
+*.tmp
+*.bak
 *.swp
-*.swo
+*~
 
+# Patch/debug files
+*.patch
+*.diff
+
+# IDE files
+.vscode/
+.idea/
+
+# Generated test outputs
+/tmp/
+*.urdf.generated
+*.sdf.generated
+# TF/debug generated graphs
 frames_*.gv
 frames_*.pdf
