@@ -59,65 +59,222 @@
 
     <model name="workcell_table">
       <static>true</static>
-      <pose>0.65 0.0 0.05 0 0 0</pose>
+      <pose>0.65 0.0 0.0 0 0 0</pose>
 
       <link name="table_link">
-        <collision name="table_collision">
+        <!-- Raised industrial shelf top.
+             This collision is real in Gazebo and will be mirrored in the
+             MoveIt planning scene as a simplified collision object. -->
+        <collision name="shelf_top_collision">
+          <pose>0 0 0.290 0 0 0</pose>
           <geometry>
             <box>
-              <size>0.40 0.70 0.10</size>
+              <size>0.40 0.70 0.020</size>
             </box>
           </geometry>
         </collision>
 
-        <visual name="table_visual">
+        <visual name="shelf_top_visual">
+          <pose>0 0 0.290 0 0 0</pose>
           <geometry>
             <box>
-              <size>0.40 0.70 0.10</size>
+              <size>0.40 0.70 0.020</size>
             </box>
           </geometry>
           <material>
-            <ambient>0.45 0.45 0.45 1</ambient>
-            <diffuse>0.45 0.45 0.45 1</diffuse>
+            <ambient>0.32 0.32 0.32 1</ambient>
+            <diffuse>0.42 0.42 0.42 1</diffuse>
+            <specular>0.18 0.18 0.18 1</specular>
+          </material>
+        </visual>
+
+        <!-- Visual-only industrial support frame.
+             These details make the table look like a workstation/shelf,
+             but we do not add every rail as a collision object yet. -->
+        <visual name="front_support_visual">
+          <pose>0 -0.325 0.145 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.40 0.030 0.290</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.10 0.10 0.10 1</ambient>
+            <diffuse>0.16 0.16 0.16 1</diffuse>
+          </material>
+        </visual>
+
+        <visual name="back_support_visual">
+          <pose>0 0.325 0.145 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.40 0.030 0.290</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.10 0.10 0.10 1</ambient>
+            <diffuse>0.16 0.16 0.16 1</diffuse>
+          </material>
+        </visual>
+
+        <visual name="left_support_visual">
+          <pose>-0.185 0 0.145 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.030 0.70 0.290</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.10 0.10 0.10 1</ambient>
+            <diffuse>0.16 0.16 0.16 1</diffuse>
+          </material>
+        </visual>
+
+        <visual name="right_support_visual">
+          <pose>0.185 0 0.145 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.030 0.70 0.290</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.10 0.10 0.10 1</ambient>
+            <diffuse>0.16 0.16 0.16 1</diffuse>
           </material>
         </visual>
       </link>
     </model>
 
-    <!-- Stable visual marker only. No physical grasp/contact yet. -->
+    <!-- Industrial input tray.
+         Visual-only workcell detail. The planning scene still handles
+         robot collision objects from the C++ application. -->
+    <model name="input_tray_visual">
+      <static>true</static>
+      <pose>0.465 0.200 0.302 0 0 0</pose>
+
+      <link name="tray_link">
+        <visual name="tray_base_visual">
+          <geometry>
+            <box>
+              <size>0.120 0.120 0.004</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.12 0.12 0.12 1</ambient>
+            <diffuse>0.18 0.18 0.18 1</diffuse>
+          </material>
+        </visual>
+
+        <visual name="tray_left_rail_visual">
+          <pose>0 0.055 0.005 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.120 0.006 0.006</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.10 0.10 0.10 1</ambient>
+            <diffuse>0.16 0.16 0.16 1</diffuse>
+          </material>
+        </visual>
+
+        <visual name="tray_right_rail_visual">
+          <pose>0 -0.055 0.0015 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.120 0.006 0.001</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.10 0.10 0.10 1</ambient>
+            <diffuse>0.16 0.16 0.16 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Stable visual workpiece only. No physical grasp/contact yet.
+         The C++ app represents the carried object in the MoveIt planning scene. -->
     <model name="pick_box_visual">
       <static>true</static>
-      <pose>0.465 0.200 0.120 0 0 0</pose>
+      <pose>0.465 0.200 0.345 0 0 0</pose>
 
       <link name="box_link">
-        <visual name="box_visual">
+        <visual name="workpiece_visual">
           <geometry>
             <box>
-              <size>0.03 0.03 0.03</size>
+              <size>0.03 0.03 0.08</size>
             </box>
           </geometry>
           <material>
-            <ambient>0.9 0.2 0.1 1</ambient>
-            <diffuse>0.9 0.2 0.1 1</diffuse>
+            <ambient>0.55 0.55 0.58 1</ambient>
+            <diffuse>0.70 0.70 0.74 1</diffuse>
+            <specular>0.25 0.25 0.25 1</specular>
           </material>
         </visual>
       </link>
     </model>
 
+    <!-- Industrial fixture nest / process station.
+         This replaces the simple green place marker visually, while keeping
+         the same target area for the current pick-and-place logic. -->
     <model name="place_marker">
       <static>true</static>
-      <pose>0.465 -0.200 0.102 0 0 0</pose>
+      <pose>0.465 -0.200 0.302 0 0 0</pose>
 
-      <link name="marker_link">
-        <visual name="marker_visual">
+      <link name="fixture_link">
+        <visual name="fixture_base_visual">
           <geometry>
             <box>
-              <size>0.06 0.06 0.004</size>
+              <size>0.100 0.100 0.004</size>
             </box>
           </geometry>
           <material>
-            <ambient>0.1 0.8 0.1 1</ambient>
-            <diffuse>0.1 0.8 0.1 1</diffuse>
+            <ambient>0.08 0.12 0.18 1</ambient>
+            <diffuse>0.12 0.18 0.26 1</diffuse>
+            <specular>0.15 0.15 0.15 1</specular>
+          </material>
+        </visual>
+
+        <visual name="fixture_back_stop_visual">
+          <pose>-0.035 0 0.004 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.006 0.080 0.008</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.07 0.10 0.15 1</ambient>
+            <diffuse>0.10 0.15 0.22 1</diffuse>
+            <specular>0.15 0.15 0.15 1</specular>
+          </material>
+        </visual>
+
+        <visual name="fixture_left_guide_visual">
+          <pose>0 0.035 0.003 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.070 0.006 0.006</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.07 0.10 0.15 1</ambient>
+            <diffuse>0.10 0.15 0.22 1</diffuse>
+            <specular>0.15 0.15 0.15 1</specular>
+          </material>
+        </visual>
+
+        <visual name="fixture_right_guide_visual">
+          <pose>0 -0.035 0.003 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.070 0.006 0.006</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.07 0.10 0.15 1</ambient>
+            <diffuse>0.10 0.15 0.22 1</diffuse>
+            <specular>0.15 0.15 0.15 1</specular>
           </material>
         </visual>
       </link>

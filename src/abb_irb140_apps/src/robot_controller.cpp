@@ -500,7 +500,7 @@ bool RobotController::addTable()
 
     primitive.dimensions[0] = 0.40;
     primitive.dimensions[1] = 0.70;
-    primitive.dimensions[2] = 0.10;
+    primitive.dimensions[2] = 0.020;
 
     geometry_msgs::msg::Pose table_pose;
 
@@ -508,7 +508,7 @@ bool RobotController::addTable()
 
     table_pose.position.x = 0.65;
     table_pose.position.y = 0.00;
-    table_pose.position.z = 0.05;
+    table_pose.position.z = 0.290;
 
     table.primitives.push_back(
         primitive
@@ -556,7 +556,7 @@ bool RobotController::addBox(
 
     primitive.dimensions[0] = 0.03;
     primitive.dimensions[1] = 0.03;
-    primitive.dimensions[2] = 0.03;
+    primitive.dimensions[2] = 0.08;
 
     geometry_msgs::msg::Pose pose;
 
@@ -614,12 +614,27 @@ bool RobotController::attachBox()
     primitive.dimensions.resize(3);
     primitive.dimensions[0] = 0.03;
     primitive.dimensions[1] = 0.03;
-    primitive.dimensions[2] = 0.03;
+    primitive.dimensions[2] = 0.08;
 
     geometry_msgs::msg::Pose pose;
-    pose.orientation.w = 1.0;
 
-    // Box relative to gripper grasp frame
+    /*
+      The free workpiece is defined in base_link with identity orientation.
+      The attached workpiece is defined relative to gripper_grasp_frame.
+
+      Because the gripper uses a side-grasp orientation, an identity
+      orientation here would align the workpiece with the gripper frame and
+      make the taller billet appear rotated when attached.
+
+      This inverse side-grasp rotation keeps the attached workpiece visually
+      aligned with the upright world workpiece during the current demo.
+    */
+    pose.orientation.x = 0.0;
+    pose.orientation.y = -0.7071068;
+    pose.orientation.z = 0.0;
+    pose.orientation.w = 0.7071068;
+
+    // Workpiece center relative to gripper_grasp_frame.
     pose.position.x = 0.0;
     pose.position.y = 0.0;
     pose.position.z = 0.0;
@@ -703,7 +718,7 @@ bool RobotController::detachBox(
 
     primitive.dimensions[0] = 0.03;
     primitive.dimensions[1] = 0.03;
-    primitive.dimensions[2] = 0.03;
+    primitive.dimensions[2] = 0.08;
 
     geometry_msgs::msg::Pose pose;
 

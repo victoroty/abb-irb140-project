@@ -30,7 +30,7 @@ int main(int argc, char * argv[])
     const double box_x = 0.465;
     const double pick_y = 0.20;
     const double place_y = -0.20;
-    const double box_z = 0.120;
+    const double box_z = 0.345;
 
     if (!robot.goHome())
     {
