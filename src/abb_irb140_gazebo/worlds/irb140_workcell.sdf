@@ -236,21 +236,7 @@
           </material>
         </visual>
 
-        <visual name="fixture_back_stop_visual">
-          <pose>-0.035 0 0.004 0 0 0</pose>
-          <geometry>
-            <box>
-              <size>0.006 0.080 0.008</size>
-            </box>
-          </geometry>
-          <material>
-            <ambient>0.07 0.10 0.15 1</ambient>
-            <diffuse>0.10 0.15 0.22 1</diffuse>
-            <specular>0.15 0.15 0.15 1</specular>
-          </material>
-        </visual>
-
-        <visual name="fixture_left_guide_visual">
+<visual name="fixture_left_guide_visual">
           <pose>0 0.035 0.003 0 0 0</pose>
           <geometry>
             <box>
