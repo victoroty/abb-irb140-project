@@ -1,3 +1,9 @@
+#include <gz/msgs/boolean.pb.h>
+#include <gz/msgs/pose.pb.h>
+
+#include <tf2/exceptions.h>
+#include <tf2/time.h>
+
 #include "abb_irb140_apps/robot_controller.hpp"
 
 #include <moveit_msgs/msg/robot_trajectory.hpp>
@@ -67,10 +73,41 @@ RobotController::RobotController()
         move_group_->getEndEffectorLink().c_str()
     );
 
+
+    tf_buffer_ =
+        std::make_shared<tf2_ros::Buffer>(
+            node_->get_clock()
+        );
+
+    tf_listener_ =
+        std::make_shared<tf2_ros::TransformListener>(
+            *tf_buffer_,
+            node_,
+            false
+        );
+
+    gazebo_sync_running_.store(true);
+
+    gazebo_sync_thread_ =
+        std::thread(
+            [this]()
+            {
+                gazeboBoxSyncLoop();
+            }
+        );
+
 }
 
 RobotController::~RobotController()
 {
+
+    gazebo_sync_running_.store(false);
+
+    if (gazebo_sync_thread_.joinable())
+    {
+        gazebo_sync_thread_.join();
+    }
+
     executor_.cancel();
 
     if (executor_thread_.joinable())
@@ -279,7 +316,15 @@ RCLCPP_INFO(
         return false;
     }
 
-    if (!moveToPose(
+    /*
+      Lift linearly after the retreat.
+
+      This is a local, vertical process motion, not a new global
+      free-space planning problem. Using Cartesian motion here makes the
+      pick sequence more deterministic and avoids intermittent OMPL
+      goal-sampling failures after the object is attached.
+    */
+    if (!moveLinear(
         pre_grasp_x,
         y,
         z + lift_height
@@ -479,6 +524,140 @@ bool RobotController::moveLinear(
 
     return result ==
         moveit::core::MoveItErrorCode::SUCCESS;
+}
+
+
+void RobotController::gazeboBoxSyncLoop()
+{
+    while (
+        gazebo_sync_running_.load() &&
+        rclcpp::ok()
+    )
+    {
+        if (gazebo_box_attached_.load())
+        {
+            try
+            {
+                const auto transform =
+                    tf_buffer_->lookupTransform(
+                        "base_link",
+                        "gripper_grasp_frame",
+                        tf2::TimePointZero
+                    );
+
+                geometry_msgs::msg::Pose box_pose;
+
+                box_pose.position.x =
+                    transform.transform.translation.x;
+
+                box_pose.position.y =
+                    transform.transform.translation.y;
+
+                box_pose.position.z =
+                    transform.transform.translation.z;
+
+                /*
+                  Keep the Gazebo workpiece upright.
+
+                  MoveIt already handles the attached collision object
+                  relative to gripper_grasp_frame. For Gazebo, this is only
+                  a clean visual transfer layer.
+                */
+                box_pose.orientation.x = 0.0;
+                box_pose.orientation.y = 0.0;
+                box_pose.orientation.z = 0.0;
+                box_pose.orientation.w = 1.0;
+
+                setGazeboBoxPose(
+                    box_pose
+                );
+            }
+            catch (const tf2::TransformException& ex)
+            {
+                RCLCPP_WARN_THROTTLE(
+                    node_->get_logger(),
+                    *node_->get_clock(),
+                    2000,
+                    "Waiting for gripper_grasp_frame TF: %s",
+                    ex.what()
+                );
+            }
+        }
+
+        rclcpp::sleep_for(
+            std::chrono::milliseconds(50)
+        );
+    }
+}
+
+bool RobotController::setGazeboBoxPose(
+    const geometry_msgs::msg::Pose& pose
+)
+{
+    gz::msgs::Pose request;
+
+    request.set_name(
+        "pick_box_visual"
+    );
+
+    request.mutable_position()->set_x(
+        pose.position.x
+    );
+
+    request.mutable_position()->set_y(
+        pose.position.y
+    );
+
+    request.mutable_position()->set_z(
+        pose.position.z
+    );
+
+    request.mutable_orientation()->set_x(
+        pose.orientation.x
+    );
+
+    request.mutable_orientation()->set_y(
+        pose.orientation.y
+    );
+
+    request.mutable_orientation()->set_z(
+        pose.orientation.z
+    );
+
+    request.mutable_orientation()->set_w(
+        pose.orientation.w
+    );
+
+    gz::msgs::Boolean response;
+
+    bool result = false;
+
+    const bool executed =
+        gazebo_transport_node_.Request(
+            "/world/irb140_workcell/set_pose",
+            request,
+            500,
+            response,
+            result
+        );
+
+    if (
+        !executed ||
+        !result ||
+        !response.data()
+    )
+    {
+        RCLCPP_WARN_THROTTLE(
+            node_->get_logger(),
+            *node_->get_clock(),
+            2000,
+            "Failed to update Gazebo workpiece pose"
+        );
+
+        return false;
+    }
+
+    return true;
 }
 
 bool RobotController::waitForCollisionObject(
@@ -895,6 +1074,24 @@ bool RobotController::addBox(
         "Box added to planning scene"
     );
 
+    geometry_msgs::msg::Pose gazebo_pose;
+
+    gazebo_pose.orientation.w =
+        1.0;
+
+    gazebo_pose.position.x =
+        x;
+
+    gazebo_pose.position.y =
+        y;
+
+    gazebo_pose.position.z =
+        z;
+
+    setGazeboBoxPose(
+        gazebo_pose
+    );
+
     return true;
 }
 
@@ -991,6 +1188,8 @@ bool RobotController::attachBox()
         "Box attached"
     );
 
+    gazebo_box_attached_.store(true);
+
     return true;
 }
 
@@ -1003,6 +1202,8 @@ bool RobotController::detachBox(
 {
     moveit::planning_interface::PlanningSceneInterface
         planning_scene_interface;
+
+    gazebo_box_attached_.store(false);
 
     moveit_msgs::msg::AttachedCollisionObject attached;
 
@@ -1102,6 +1303,24 @@ bool RobotController::detachBox(
     RCLCPP_INFO(
         node_->get_logger(),
         "Box detached and placed in world"
+    );
+
+    geometry_msgs::msg::Pose gazebo_pose;
+
+    gazebo_pose.orientation.w =
+        1.0;
+
+    gazebo_pose.position.x =
+        x;
+
+    gazebo_pose.position.y =
+        y;
+
+    gazebo_pose.position.z =
+        z;
+
+    setGazeboBoxPose(
+        gazebo_pose
     );
 
     return true;

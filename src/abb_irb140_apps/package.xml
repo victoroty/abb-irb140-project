@@ -19,4 +19,8 @@
   <export>
     <build_type>ament_cmake</build_type>
   </export>
+  <depend>tf2</depend>
+  <depend>tf2_ros</depend>
+  <depend>gz_msgs_vendor</depend>
+  <depend>gz_transport_vendor</depend>
 </package>

@@ -26,7 +26,10 @@ endif()
 include_directories(
   include
 )
-
+find_package(tf2 REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(gz-msgs10 REQUIRED)
+find_package(gz-transport13 REQUIRED)
 add_executable(move_home
   src/move_home.cpp
 )
@@ -44,7 +47,15 @@ add_executable(robot_controller_test
 ament_target_dependencies(robot_controller_test
   rclcpp
   moveit_ros_planning_interface
+
+  tf2
+  tf2_ros)
+
+target_link_libraries(robot_controller_test
+  gz-msgs10::gz-msgs10
+  gz-transport13::gz-transport13
 )
+
 
 add_executable(pick_and_place_demo
   src/pick_and_place_demo.cpp
@@ -54,7 +65,15 @@ add_executable(pick_and_place_demo
 ament_target_dependencies(pick_and_place_demo
   rclcpp
   moveit_ros_planning_interface
+
+  tf2
+  tf2_ros)
+
+target_link_libraries(pick_and_place_demo
+  gz-msgs10::gz-msgs10
+  gz-transport13::gz-transport13
 )
+
 
 install(
   TARGETS
