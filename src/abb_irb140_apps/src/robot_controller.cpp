@@ -480,6 +480,281 @@ bool RobotController::moveLinear(
     return result ==
         moveit::core::MoveItErrorCode::SUCCESS;
 }
+
+bool RobotController::waitForCollisionObject(
+    const std::string& object_id,
+    double timeout_seconds
+)
+{
+    moveit::planning_interface::PlanningSceneInterface
+        planning_scene_interface;
+
+    const auto start_time =
+        std::chrono::steady_clock::now();
+
+    const auto timeout =
+        std::chrono::duration<double>(timeout_seconds);
+
+    while (
+        std::chrono::steady_clock::now() - start_time < timeout
+    )
+    {
+        const auto objects =
+            planning_scene_interface.getObjects(
+                {object_id}
+            );
+
+        if (objects.find(object_id) != objects.end())
+        {
+            RCLCPP_INFO(
+                node_->get_logger(),
+                "Confirmed collision object '%s' in planning scene",
+                object_id.c_str()
+            );
+
+            return true;
+        }
+
+        rclcpp::sleep_for(
+            std::chrono::milliseconds(100)
+        );
+    }
+
+    RCLCPP_ERROR(
+        node_->get_logger(),
+        "Timed out waiting for collision object '%s'",
+        object_id.c_str()
+    );
+
+    return false;
+}
+
+bool RobotController::waitUntilCollisionObjectRemoved(
+    const std::string& object_id,
+    double timeout_seconds
+)
+{
+    moveit::planning_interface::PlanningSceneInterface
+        planning_scene_interface;
+
+    const auto start_time =
+        std::chrono::steady_clock::now();
+
+    const auto timeout =
+        std::chrono::duration<double>(timeout_seconds);
+
+    while (
+        std::chrono::steady_clock::now() - start_time < timeout
+    )
+    {
+        const auto objects =
+            planning_scene_interface.getObjects(
+                {object_id}
+            );
+
+        if (objects.find(object_id) == objects.end())
+        {
+            RCLCPP_INFO(
+                node_->get_logger(),
+                "Confirmed collision object '%s' removed from planning scene",
+                object_id.c_str()
+            );
+
+            return true;
+        }
+
+        rclcpp::sleep_for(
+            std::chrono::milliseconds(100)
+        );
+    }
+
+    RCLCPP_ERROR(
+        node_->get_logger(),
+        "Timed out waiting for collision object '%s' to be removed",
+        object_id.c_str()
+    );
+
+    return false;
+}
+
+bool RobotController::waitForAttachedObject(
+    const std::string& object_id,
+    double timeout_seconds
+)
+{
+    moveit::planning_interface::PlanningSceneInterface
+        planning_scene_interface;
+
+    const auto start_time =
+        std::chrono::steady_clock::now();
+
+    const auto timeout =
+        std::chrono::duration<double>(timeout_seconds);
+
+    while (
+        std::chrono::steady_clock::now() - start_time < timeout
+    )
+    {
+        const auto objects =
+            planning_scene_interface.getAttachedObjects(
+                {object_id}
+            );
+
+        if (objects.find(object_id) != objects.end())
+        {
+            RCLCPP_INFO(
+                node_->get_logger(),
+                "Confirmed attached object '%s'",
+                object_id.c_str()
+            );
+
+            return true;
+        }
+
+        rclcpp::sleep_for(
+            std::chrono::milliseconds(100)
+        );
+    }
+
+    RCLCPP_ERROR(
+        node_->get_logger(),
+        "Timed out waiting for attached object '%s'",
+        object_id.c_str()
+    );
+
+    return false;
+}
+
+bool RobotController::waitUntilAttachedObjectRemoved(
+    const std::string& object_id,
+    double timeout_seconds
+)
+{
+    moveit::planning_interface::PlanningSceneInterface
+        planning_scene_interface;
+
+    const auto start_time =
+        std::chrono::steady_clock::now();
+
+    const auto timeout =
+        std::chrono::duration<double>(timeout_seconds);
+
+    while (
+        std::chrono::steady_clock::now() - start_time < timeout
+    )
+    {
+        const auto objects =
+            planning_scene_interface.getAttachedObjects(
+                {object_id}
+            );
+
+        if (objects.find(object_id) == objects.end())
+        {
+            RCLCPP_INFO(
+                node_->get_logger(),
+                "Confirmed attached object '%s' removed",
+                object_id.c_str()
+            );
+
+            return true;
+        }
+
+        rclcpp::sleep_for(
+            std::chrono::milliseconds(100)
+        );
+    }
+
+    RCLCPP_ERROR(
+        node_->get_logger(),
+        "Timed out waiting for attached object '%s' to be removed",
+        object_id.c_str()
+    );
+
+    return false;
+}
+
+bool RobotController::clearWorkcellObjects()
+{
+    moveit::planning_interface::PlanningSceneInterface
+        planning_scene_interface;
+
+    moveit_msgs::msg::AttachedCollisionObject attached_box;
+
+    attached_box.link_name =
+        "gripper_grasp_frame";
+
+    attached_box.object.id =
+        "box";
+
+    attached_box.object.operation =
+        attached_box.object.REMOVE;
+
+    planning_scene_interface.applyAttachedCollisionObject(
+        attached_box
+    );
+
+    moveit_msgs::msg::CollisionObject box;
+
+    box.header.frame_id =
+        "base_link";
+
+    box.id =
+        "box";
+
+    box.operation =
+        box.REMOVE;
+
+    planning_scene_interface.applyCollisionObject(
+        box
+    );
+
+    moveit_msgs::msg::CollisionObject table;
+
+    table.header.frame_id =
+        "base_link";
+
+    table.id =
+        "table";
+
+    table.operation =
+        table.REMOVE;
+
+    planning_scene_interface.applyCollisionObject(
+        table
+    );
+
+    const bool attached_box_removed =
+        waitUntilAttachedObjectRemoved("box", 2.0);
+
+    const bool world_box_removed =
+        waitUntilCollisionObjectRemoved("box", 2.0);
+
+    const bool table_removed =
+        waitUntilCollisionObjectRemoved("table", 2.0);
+
+    if (
+        attached_box_removed &&
+        world_box_removed &&
+        table_removed
+    )
+    {
+        RCLCPP_INFO(
+            node_->get_logger(),
+            "Workcell planning scene objects cleared"
+        );
+
+        return true;
+    }
+
+    RCLCPP_ERROR(
+        node_->get_logger(),
+        "Failed to fully clear workcell planning scene objects"
+    );
+
+    return false;
+}
+
+
 bool RobotController::addTable()
 {
     moveit::planning_interface::PlanningSceneInterface
@@ -521,8 +796,25 @@ bool RobotController::addTable()
     table.operation =
         table.ADD;
 
-    planning_scene_interface
-        .applyCollisionObject(table);
+    const bool applied =
+        planning_scene_interface.applyCollisionObject(
+            table
+        );
+
+    if (!applied)
+    {
+        RCLCPP_ERROR(
+            node_->get_logger(),
+            "Failed to apply table collision object"
+        );
+
+        return false;
+    }
+
+    if (!waitForCollisionObject("table", 3.0))
+    {
+        return false;
+    }
 
     RCLCPP_INFO(
         node_->get_logger(),
@@ -531,6 +823,7 @@ bool RobotController::addTable()
 
     return true;
 }
+
 
 bool RobotController::addBox(
     double x,
@@ -577,18 +870,34 @@ bool RobotController::addBox(
     box.operation =
         box.ADD;
 
-    planning_scene_interface
-        .applyCollisionObject(box);
+    const bool applied =
+        planning_scene_interface.applyCollisionObject(
+            box
+        );
 
-    rclcpp::sleep_for(std::chrono::seconds(2));
+    if (!applied)
+    {
+        RCLCPP_ERROR(
+            node_->get_logger(),
+            "Failed to apply box collision object"
+        );
+
+        return false;
+    }
+
+    if (!waitForCollisionObject("box", 3.0))
+    {
+        return false;
+    }
 
     RCLCPP_INFO(
         node_->get_logger(),
-        "Box added"
+        "Box added to planning scene"
     );
 
     return true;
 }
+
 
 bool RobotController::attachBox()
 {
@@ -657,12 +966,25 @@ bool RobotController::attachBox()
         "gripper_rightfinger"
     };
 
-    planning_scene_interface
-        .applyAttachedCollisionObject(
+    const bool applied =
+        planning_scene_interface.applyAttachedCollisionObject(
             attached
         );
 
-    rclcpp::sleep_for(std::chrono::seconds(2));
+    if (!applied)
+    {
+        RCLCPP_ERROR(
+            node_->get_logger(),
+            "Failed to apply attached box object"
+        );
+
+        return false;
+    }
+
+    if (!waitForAttachedObject("box", 3.0))
+    {
+        return false;
+    }
 
     RCLCPP_INFO(
         node_->get_logger(),
@@ -671,6 +993,7 @@ bool RobotController::attachBox()
 
     return true;
 }
+
 
 bool RobotController::detachBox(
     double x,
@@ -692,14 +1015,25 @@ bool RobotController::detachBox(
     attached.object.operation =
         attached.object.REMOVE;
 
-    planning_scene_interface
-        .applyAttachedCollisionObject(
+    const bool detached =
+        planning_scene_interface.applyAttachedCollisionObject(
             attached
         );
 
-    rclcpp::sleep_for(
-        std::chrono::milliseconds(500)
-    );
+    if (!detached)
+    {
+        RCLCPP_ERROR(
+            node_->get_logger(),
+            "Failed to remove attached box object"
+        );
+
+        return false;
+    }
+
+    if (!waitUntilAttachedObjectRemoved("box", 3.0))
+    {
+        return false;
+    }
 
     moveit_msgs::msg::CollisionObject box;
 
@@ -745,14 +1079,25 @@ bool RobotController::detachBox(
     box.operation =
         box.ADD;
 
-    planning_scene_interface
-        .applyCollisionObject(
+    const bool applied =
+        planning_scene_interface.applyCollisionObject(
             box
         );
 
-    rclcpp::sleep_for(
-        std::chrono::milliseconds(500)
-    );
+    if (!applied)
+    {
+        RCLCPP_ERROR(
+            node_->get_logger(),
+            "Failed to re-add detached box to world"
+        );
+
+        return false;
+    }
+
+    if (!waitForCollisionObject("box", 3.0))
+    {
+        return false;
+    }
 
     RCLCPP_INFO(
         node_->get_logger(),
@@ -761,3 +1106,4 @@ bool RobotController::detachBox(
 
     return true;
 }
+

@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <thread>
+#include <string>
 
 #include <vector>
 #include <geometry_msgs/msg/pose.hpp>
@@ -28,6 +29,8 @@ public:
     bool openGripper();
 
     bool closeGripper();
+
+    bool clearWorkcellObjects();
 
     bool addTable();
 
@@ -79,6 +82,26 @@ public:
 private:
 
     bool executeCurrentTarget();
+
+    bool waitForCollisionObject(
+        const std::string& object_id,
+        double timeout_seconds
+    );
+
+    bool waitUntilCollisionObjectRemoved(
+        const std::string& object_id,
+        double timeout_seconds
+    );
+
+    bool waitForAttachedObject(
+        const std::string& object_id,
+        double timeout_seconds
+    );
+
+    bool waitUntilAttachedObjectRemoved(
+        const std::string& object_id,
+        double timeout_seconds
+    );
 
     rclcpp::Node::SharedPtr node_;
 

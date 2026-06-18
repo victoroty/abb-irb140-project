@@ -37,6 +37,11 @@ int main(int argc, char * argv[])
         return fail("goHome");
     }
 
+    if (!robot.clearWorkcellObjects())
+    {
+        return 1;
+    }
+
     if (!robot.addTable())
     {
         return fail("addTable");
