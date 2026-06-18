@@ -118,28 +118,87 @@ RobotController::~RobotController()
 
 bool RobotController::executeCurrentTarget()
 {
-    moveit::planning_interface::MoveGroupInterface::Plan plan;
+    constexpr int max_planning_attempts = 5;
 
-    bool success =
-        static_cast<bool>(
-            move_group_->plan(plan)
-        );
+    /*
+      OMPL/RRTConnect is sampling-based, so one failed or invalid sampled
+      path does not necessarily mean the target is impossible.
 
-    if (!success)
+      Retrying a few times keeps the demo robust while preserving collision
+      checking and real failure detection.
+    */
+    for (
+        int attempt = 1;
+        attempt <= max_planning_attempts;
+        ++attempt
+    )
     {
-        RCLCPP_ERROR(
+        move_group_->setStartStateToCurrentState();
+
+        moveit::planning_interface::MoveGroupInterface::Plan plan;
+
+        RCLCPP_INFO(
             node_->get_logger(),
-            "Planning failed"
+            "Planning attempt %d/%d",
+            attempt,
+            max_planning_attempts
         );
 
-        return false;
+        const bool planned =
+            static_cast<bool>(
+                move_group_->plan(
+                    plan
+                )
+            );
+
+        if (!planned)
+        {
+            RCLCPP_WARN(
+                node_->get_logger(),
+                "Planning attempt %d/%d failed",
+                attempt,
+                max_planning_attempts
+            );
+
+            rclcpp::sleep_for(
+                std::chrono::milliseconds(150)
+            );
+
+            continue;
+        }
+
+        const auto result =
+            move_group_->execute(
+                plan
+            );
+
+        if (
+            result ==
+            moveit::core::MoveItErrorCode::SUCCESS
+        )
+        {
+            return true;
+        }
+
+        RCLCPP_WARN(
+            node_->get_logger(),
+            "Execution attempt %d/%d failed",
+            attempt,
+            max_planning_attempts
+        );
+
+        rclcpp::sleep_for(
+            std::chrono::milliseconds(150)
+        );
     }
 
-    auto result =
-        move_group_->execute(plan);
+    RCLCPP_ERROR(
+        node_->get_logger(),
+        "Planning/execution failed after %d attempts",
+        max_planning_attempts
+    );
 
-    return result ==
-        moveit::core::MoveItErrorCode::SUCCESS;
+    return false;
 }
 
 bool RobotController::goHome()
